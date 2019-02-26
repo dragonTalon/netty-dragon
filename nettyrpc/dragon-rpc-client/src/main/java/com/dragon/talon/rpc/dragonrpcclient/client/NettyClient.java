@@ -56,6 +56,9 @@ public class NettyClient {
         }
     }
 
+    /**
+     * 这个其实可以放在钩子中，做优雅下线
+     */
     public void close() {
         try {
             if (future != null) {
