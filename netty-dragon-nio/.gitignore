@@ -1,0 +1,8 @@
+# Created by .ignore support plugin (hsz.mobi)
+### ig template
+.idea/
+*.iml
+*.log
+logs/
+*.class
+target/
