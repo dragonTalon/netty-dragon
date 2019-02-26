@@ -4,6 +4,7 @@ import com.dragon.talon.rpc.dragonrpcclient.proxy.ProxyFactory;
 import com.dragon.talon.rpc.dragonrpcclient.service.DemoClient;
 import com.dragon.talon.rpc.dragonrpccommon.annotation.Consumer;
 import com.dragon.talon.rpc.dragonrpccommon.api.DemoApi;
+import com.google.common.collect.Maps;
 import org.springframework.aop.support.AopUtils;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,6 +20,7 @@ import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
@@ -35,18 +37,13 @@ public class ClientConfig {
     private String host;
     @Value("${dragon.server.port}")
     private int port;
+
+    /**
+     * 存放所有实现的proxy对象
+     * 就和ioc一样嘛～
+     */
+    private Map<Class<?>,Object> proxyMap = Maps.newConcurrentMap();
     
-  /*  @PostConstruct
-    public void init() throws ClassNotFoundException {
-        Map<String, Object> annotation = application.getBeansWithAnnotation(Component.class);
-        Class<?> aClass = Class.forName("com.dragon.talon.rpc.dragonrpccommon.api.DemoApi");
-        Object o = ProxyFactory.create(new Class[]{aClass});
-        DemoClient demoClient = application.getBean("demoClient", DemoClient.class);
-        demoClient.setApi((DemoApi) demoClient);
-    }*/
-
-   
-
     @Bean
     public BeanPostProcessor beanPostProcessor() {
         return new BeanPostProcessor() {
@@ -63,7 +60,11 @@ public class ClientConfig {
                     for (Field field : objClz.getDeclaredFields()) {
                         Consumer consumer = field.getAnnotation(Consumer.class);
                         if (consumer != null){
-                            Object obj = ProxyFactory.create(new Class[]{field.getType()}, host, port);
+                            Object obj = proxyMap.get(field.getType());
+                            if (Objects.isNull(obj)){
+                                obj = ProxyFactory.create(new Class[]{field.getType()}, host, port);
+                                proxyMap.put(field.getType(),obj);
+                            }
                             field.setAccessible(true);
                             field.set(bean,obj);
                         }
