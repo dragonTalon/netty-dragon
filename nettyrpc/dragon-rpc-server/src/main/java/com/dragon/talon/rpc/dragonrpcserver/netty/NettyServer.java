@@ -3,6 +3,7 @@ package com.dragon.talon.rpc.dragonrpcserver.netty;
 import com.dragon.talon.rpc.dragonrpccommon.annotation.rpcProvider;
 import com.dragon.talon.rpc.dragonrpccommon.handler.MessageDecoder;
 import com.dragon.talon.rpc.dragonrpccommon.handler.MessageEncoder;
+import com.dragon.talon.rpc.dragonrpccommon.zookeeper.DragonZk;
 import com.dragon.talon.rpc.dragonrpcserver.proxy.ProxyHandler;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
@@ -20,6 +21,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Configuration;
 
 import javax.annotation.PostConstruct;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.Optional;
 
@@ -38,6 +40,8 @@ public class NettyServer {
     @Value("${dragon.server.address}")
     private String address;
     
+    private DragonZk dragonZk;
+
     @Autowired
     private ApplicationContext application;
     
@@ -66,11 +70,20 @@ public class NettyServer {
                     });
             System.out.println("开启 netty rpc 之旅～");
             future = serverBootstrap.bind(address,port).sync();
+            registZk(annotation,address+":"+port);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
     }
-
+    
+    public void registZk(Map<String, Object> annotation,String loacl){
+        DragonZk dragonZk = DragonZk.newInstance("127.0.0.1:2181", 5000);
+        for (Map.Entry<String,Object> entry : annotation.entrySet()){
+            Class<?>[] interfaces = entry.getValue().getClass().getInterfaces();
+            Arrays.stream(interfaces).map(s->s.getName()).forEach(s->dragonZk.registZkForService(loacl,s));
+        }
+    }
+    
     public void close() {
         if (Optional.ofNullable(future).isPresent()) {
             try {
